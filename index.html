@@ -649,7 +649,7 @@ function initTelegram() {
       showToast('🎁 +500 Referral Bonus!');
     }
   }
-  document.getElementById('refLink').textContent = `https://t.me/YourBotUsername?start=ref_${userId}`;
+  document.getElementById('refLink').textContent = `https://t.me/josweb?start=ref_${userId}`;
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
@@ -732,8 +732,8 @@ function claimDaily() {
 
 // ─── TASKS ───────────────────────────────────────────────────────────────────
 const TASKS=[
-  {id:'telegram',icon:'📢',name:'Join Telegram Channel',desc:'Join @JosCoin official channel',reward:500,action:()=>window.open('https://t.me/yourchannel')},
-  {id:'twitter', icon:'🐦',name:'Follow on Twitter',   desc:'Follow @JosCoin on X/Twitter', reward:300,action:()=>window.open('https://twitter.com/yourhandle')},
+  {id:'telegram',icon:'📢',name:'Join Telegram Channel',desc:'Join @JosCoin official channel',reward:500,action:()=>window.open('https://t.me/faaru')},
+  {id:'twitter', icon:'🐦',name:'Follow on Twitter',   desc:'Follow @JosCoin on X/Twitter', reward:300,action:()=>window.open('https://twitter.com/YosephAb1')},
   {id:'share',   icon:'📤',name:'Share the App',        desc:'Share JosCoin with anyone',    reward:250,action:shareApp},
   {id:'tap100',  icon:'👆',name:'Tap 100 Times',        desc:'Progress: 0/100',              reward:200,action:null},
   {id:'tap1000', icon:'🚀',name:'Tap 1000 Times',       desc:'Progress: 0/1000',             reward:1000,action:null},
