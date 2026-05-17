@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>JosCoin – Tap & Earn</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- TON Connect UI -->
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --gold: #FFD700;
+    --gold2: #FFA500;
+    --dark: #0a0a14;
+    --dark2: #10101e;
+    --dark3: #16162a;
+    --card: #1a1a2e;
+    --accent: #7b2fff;
+    --accent2: #00e5ff;
+    --green: #00ff88;
+    --red: #ff4466;
+    --ton: #0098EA;
+    --ton2: #0077BB;
+    --text: #e8e8ff;
+    --sub: #8888aa;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(123,47,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,229,255,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 50%, rgba(255,215,0,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+
+  /* HEADER */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255,215,0,0.1);
+  }
+  .user-info { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 16px;
+    color: white; border: 2px solid var(--gold);
+  }
+  .username { font-size: 15px; font-weight: 600; color: var(--text); }
+  .level-badge {
+    font-size: 11px; color: var(--gold); font-family: 'Orbitron', sans-serif;
+    background: rgba(255,215,0,0.1); padding: 2px 8px; border-radius: 20px;
+    border: 1px solid rgba(255,215,0,0.3); margin-top: 2px;
+  }
+  .coin-display {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 20px; padding: 6px 14px;
+  }
+  .coin-display .icon { font-size: 18px; }
+  .coin-count {
+    font-family: 'Orbitron', sans-serif; font-weight: 700;
+    font-size: 16px; color: var(--gold);
+    min-width: 80px; text-align: right;
+    transition: transform 0.1s;
+  }
+
+  /* ENERGY BAR */
+  .energy-wrap { padding: 10px 20px 0; }
+  .energy-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); margin-bottom: 5px; }
+  .energy-bar-bg { height: 8px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+  .energy-bar-fill {
+    height: 100%; border-radius: 10px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.3s ease;
+  }
+
+  /* TAP ZONE */
+  .tap-zone {
+    display: flex; flex-direction: column;
+    align-items: center; padding: 28px 20px 20px;
+    position: relative;
+  }
+  .tap-coin {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFE55C, #FFB800 40%, #CC7700 80%, #7A4200);
+    border: 4px solid rgba(255,215,0,0.6);
+    box-shadow: 0 0 0 8px rgba(255,165,0,0.12), 0 0 40px rgba(255,165,0,0.25), 0 8px 32px rgba(0,0,0,0.6), inset 0 2px 8px rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.08s;
+    position: relative; overflow: hidden;
+  }
+  .tap-coin:active { transform: scale(0.93); }
+  .tap-coin-inner { font-size: 80px; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); pointer-events: none; }
+  .tap-coin::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.25) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .tap-hint { margin-top: 16px; font-size: 14px; color: var(--sub); letter-spacing: 2px; text-transform: uppercase; }
+  .tap-per-click { font-size: 13px; color: var(--gold); margin-top: 4px; font-family: 'Orbitron', sans-serif; }
+
+  /* Floating +1 */
+  .float-num {
+    position: fixed; pointer-events: none; z-index: 999;
+    font-family: 'Orbitron', sans-serif; font-weight: 700;
+    font-size: 26px; color: var(--gold);
+    text-shadow: 0 0 12px rgba(255,215,0,0.8);
+    animation: floatUp 0.9s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    80% { opacity: 0.6; }
+    100% { opacity: 0; transform: translateY(-90px) scale(0.7); }
+  }
+
+  /* NAV */
+  .nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: var(--dark2); border-top: 1px solid rgba(255,215,0,0.1);
+    display: flex; z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; padding: 10px 4px 12px; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; cursor: pointer; border: none;
+    background: none; color: var(--sub); font-family: 'Rajdhani', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; transition: color 0.2s;
+    position: relative;
+  }
+  .nav-btn .nav-icon { font-size: 22px; transition: transform 0.2s; }
+  .nav-btn.active { color: var(--gold); }
+  .nav-btn.active .nav-icon { transform: scale(1.15); }
+  .nav-badge {
+    position: absolute; top: 6px; right: calc(50% - 22px);
+    background: var(--red); color: white; border-radius: 20px;
+    font-size: 9px; font-weight: 700; padding: 1px 5px; min-width: 16px; text-align: center;
+  }
+
+  /* PAGES */
+  .page { display: none; padding: 0 16px; }
+  .page.active { display: block; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--sub); letter-spacing: 2px; text-transform: uppercase;
+    margin: 20px 0 12px; border-left: 3px solid var(--gold); padding-left: 10px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 16px; margin-bottom: 12px;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* DAILY */
+  .daily-card { background: linear-gradient(135deg, rgba(123,47,255,0.2), rgba(0,229,255,0.1)); border-color: rgba(123,47,255,0.3); }
+  .daily-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .daily-title { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; }
+  .daily-streak { font-size: 13px; color: var(--accent2); font-weight: 600; }
+  .daily-days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .day-dot {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; gap: 2px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: var(--sub);
+  }
+  .day-dot .day-num { font-family: 'Orbitron', sans-serif; font-size: 11px; }
+  .day-dot.claimed { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
+  .day-dot.today { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; color: white; box-shadow: 0 0 16px rgba(123,47,255,0.5); }
+  .claim-btn {
+    width: 100%; margin-top: 14px; padding: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 12px; color: white;
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; letter-spacing: 1px;
+    box-shadow: 0 4px 20px rgba(123,47,255,0.4);
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .claim-btn:active { transform: scale(0.97); }
+  .claim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* TASKS */
+  .task-item {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .task-item.done { opacity: 0.5; pointer-events: none; }
+  .task-icon { font-size: 28px; flex-shrink: 0; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; }
+  .task-info { flex: 1; }
+  .task-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .task-desc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .task-reward { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+  /* REFERRAL */
+  .ref-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .ref-stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; text-align: center; }
+  .ref-stat-num { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--gold); }
+  .ref-stat-label { font-size: 12px; color: var(--sub); margin-top: 4px; }
+  .ref-link-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,215,0,0.2); border-radius: 12px; padding: 12px 16px; font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--gold); word-break: break-all; margin-bottom: 12px; }
+  .copy-btn, .invite-btn {
+    width: 100%; padding: 13px; border-radius: 12px; border: none;
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; letter-spacing: 1px; margin-bottom: 10px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .copy-btn { background: rgba(255,215,0,0.1); color: var(--gold); border: 1px solid rgba(255,215,0,0.3); }
+  .invite-btn { background: linear-gradient(135deg, #22a559, #128c3e); color: white; box-shadow: 0 4px 20px rgba(34,165,89,0.4); }
+  .copy-btn:active, .invite-btn:active { transform: scale(0.97); }
+
+  /* STATS GRID */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; text-align: center; }
+  .stat-val { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900; color: var(--accent2); }
+  .stat-label { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+  /* BOOST */
+  .boost-item { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .boost-icon { font-size: 32px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; flex-shrink: 0; }
+  .boost-info { flex: 1; }
+  .boost-name { font-size: 15px; font-weight: 700; }
+  .boost-desc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .boost-level { font-size: 11px; color: var(--accent2); font-weight: 600; margin-top: 4px; }
+  .boost-buy {
+    background: linear-gradient(135deg, var(--gold2), var(--gold));
+    border: none; border-radius: 10px; padding: 8px 14px;
+    font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+    color: #1a0a00; cursor: pointer; flex-shrink: 0;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .boost-buy:active { transform: scale(0.95); }
+  .boost-buy:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ═══════════════════════════════════════════
+     WALLET PAGE
+  ═══════════════════════════════════════════ */
+  .wallet-hero {
+    margin: 20px 0 16px;
+    background: linear-gradient(135deg, rgba(0,152,234,0.15), rgba(0,119,187,0.08));
+    border: 1px solid rgba(0,152,234,0.3);
+    border-radius: 20px; padding: 28px 20px;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .wallet-hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(0,152,234,0.2), transparent 70%);
+    pointer-events: none;
+  }
+  .ton-logo {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, #0098EA, #005fa3);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    box-shadow: 0 0 32px rgba(0,152,234,0.5);
+    font-size: 36px;
+  }
+  .wallet-title { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900; color: white; margin-bottom: 8px; }
+  .wallet-sub { font-size: 13px; color: var(--sub); line-height: 1.5; }
+
+  /* CONNECT BTN */
+  .ton-connect-btn {
+    width: 100%; padding: 16px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, #0098EA, #005fa3);
+    color: white; font-family: 'Orbitron', sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 4px 24px rgba(0,152,234,0.4);
+    transition: transform 0.1s, box-shadow 0.2s;
+    margin-bottom: 12px;
+  }
+  .ton-connect-btn:active { transform: scale(0.97); }
+  .ton-connect-btn.connected {
+    background: linear-gradient(135deg, #00c853, #007a33);
+    box-shadow: 0 4px 24px rgba(0,200,83,0.4);
+  }
+
+  /* DISCONNECT BTN */
+  .ton-disconnect-btn {
+    width: 100%; padding: 13px; border-radius: 14px;
+    border: 1px solid rgba(255,68,102,0.3);
+    background: rgba(255,68,102,0.08); color: var(--red);
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; letter-spacing: 1px;
+    transition: transform 0.1s, background 0.2s;
+    margin-bottom: 12px; display: none;
+  }
+  .ton-disconnect-btn:active { transform: scale(0.97); }
+
+  /* WALLET ADDRESS BOX */
+  .wallet-address-box {
+    background: rgba(0,152,234,0.08); border: 1px solid rgba(0,152,234,0.25);
+    border-radius: 14px; padding: 16px; margin-bottom: 12px;
+    display: none;
+  }
+  .wallet-address-label { font-size: 11px; color: var(--ton); letter-spacing: 1px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+  .wallet-address-val {
+    font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--text);
+    word-break: break-all; line-height: 1.6;
+  }
+  .wallet-address-copy {
+    margin-top: 10px; padding: 8px 16px; border-radius: 8px; border: none;
+    background: rgba(0,152,234,0.15); color: var(--ton);
+    font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+    cursor: pointer; letter-spacing: 1px;
+  }
+
+  /* WALLET BALANCE CARD */
+  .wallet-balance-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 20px; margin-bottom: 12px;
+    display: none;
+  }
+  .balance-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .balance-label { font-size: 13px; color: var(--sub); }
+  .balance-val { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--ton); }
+  .coin-to-ton {
+    background: rgba(0,152,234,0.08); border: 1px solid rgba(0,152,234,0.2);
+    border-radius: 12px; padding: 14px; text-align: center;
+  }
+  .coin-to-ton-label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+  .coin-to-ton-val { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; color: var(--gold); }
+  .coin-to-ton-note { font-size: 11px; color: var(--sub); margin-top: 4px; }
+
+  /* WALLET OPTIONS */
+  .wallet-option {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  }
+  .wallet-option:hover { border-color: rgba(0,152,234,0.3); }
+  .wallet-option-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .wallet-option-info { flex: 1; }
+  .wallet-option-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .wallet-option-desc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .wallet-option-arrow { color: var(--sub); font-size: 18px; }
+
+  /* AIRDROP BANNER */
+  .airdrop-banner {
+    background: linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,215,0,0.06));
+    border: 1px solid rgba(255,165,0,0.3);
+    border-radius: 16px; padding: 16px 20px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .airdrop-icon { font-size: 36px; flex-shrink: 0; }
+  .airdrop-text { flex: 1; }
+  .airdrop-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
+  .airdrop-desc { font-size: 12px; color: var(--sub); line-height: 1.4; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    background: var(--dark3); border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 14px; padding: 12px 24px;
+    font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--gold);
+    z-index: 9999; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6); max-width: 300px; text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.ton { border-color: rgba(0,152,234,0.4); color: var(--ton); }
+
+  .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,215,0,0.25);
+    transform: scale(0); animation: rippleAnim 0.5s linear;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="user-info">
+      <div class="avatar" id="avatarEl">J</div>
+      <div>
+        <div class="username" id="usernameEl">Player</div>
+        <div class="level-badge" id="levelEl">⚡ LVL 1</div>
+      </div>
+    </div>
+    <div class="coin-display">
+      <span class="icon">🪙</span>
+      <span class="coin-count" id="coinCount">0</span>
+    </div>
+  </div>
+
+  <!-- TAP PAGE -->
+  <div class="page active" id="page-tap">
+    <div class="energy-wrap">
+      <div class="energy-label">
+        <span>⚡ Energy</span>
+        <span id="energyText">500 / 500</span>
+      </div>
+      <div class="energy-bar-bg">
+        <div class="energy-bar-fill" id="energyBar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="tap-zone">
+      <div class="tap-coin" id="tapCoin">
+        <div class="tap-coin-inner">🪙</div>
+      </div>
+      <div class="tap-hint">TAP TO EARN</div>
+      <div class="tap-per-click" id="tapRate">+1 per tap</div>
+    </div>
+    <div style="padding: 0 16px;">
+      <div class="section-title">YOUR STATS</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="totalTaps">0</div><div class="stat-label">Total Taps</div></div>
+        <div class="stat-card"><div class="stat-val" id="totalEarned">0</div><div class="stat-label">Total Earned</div></div>
+        <div class="stat-card"><div class="stat-val" id="todayEarned">0</div><div class="stat-label">Today's Coins</div></div>
+        <div class="stat-card"><div class="stat-val" id="refCount">0</div><div class="stat-label">Friends</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASKS PAGE -->
+  <div class="page" id="page-tasks">
+    <div class="section-title">DAILY REWARD</div>
+    <div class="card daily-card">
+      <div class="daily-header">
+        <div class="daily-title">🎁 Daily Check-In</div>
+        <div class="daily-streak" id="streakLabel">🔥 0 day streak</div>
+      </div>
+      <div class="daily-days" id="dailyDots"></div>
+      <button class="claim-btn" id="claimBtn" onclick="claimDaily()">CLAIM TODAY'S REWARD</button>
+    </div>
+    <div class="section-title">TASKS</div>
+    <div id="taskList"></div>
+  </div>
+
+  <!-- BOOSTS PAGE -->
+  <div class="page" id="page-boost">
+    <div class="section-title">UPGRADES</div>
+    <div id="boostList"></div>
+  </div>
+
+  <!-- REFERRAL PAGE -->
+  <div class="page" id="page-ref">
+    <div class="section-title">INVITE FRIENDS</div>
+    <div class="ref-stats">
+      <div class="ref-stat"><div class="ref-stat-num" id="refNum">0</div><div class="ref-stat-label">Friends Invited</div></div>
+      <div class="ref-stat"><div class="ref-stat-num" id="refCoins">0</div><div class="ref-stat-label">Coins from Refs</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;color:var(--sub);margin-bottom:10px;">🎁 Earn <strong style="color:var(--gold)">500 coins</strong> for each friend who joins!</div>
+      <div class="ref-link-box" id="refLink">Loading...</div>
+      <button class="copy-btn" onclick="copyRef()">📋 COPY LINK</button>
+      <button class="invite-btn" onclick="inviteTelegram()">💬 INVITE VIA TELEGRAM</button>
+    </div>
+    <div class="section-title">HOW IT WORKS</div>
+    <div class="card" style="padding:16px 20px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;flex-shrink:0;">1</div><div style="font-size:14px;color:var(--sub);padding-top:4px;">Share your unique referral link with friends</div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;flex-shrink:0;">2</div><div style="font-size:14px;color:var(--sub);padding-top:4px;">Friend opens the bot and starts tapping</div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:28px;height:28px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:#1a0a00;flex-shrink:0;">3</div><div style="font-size:14px;color:var(--sub);padding-top:4px;">You both receive <strong style="color:var(--gold)">500 coins</strong> instantly!</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ WALLET PAGE ═══════════ -->
+  <div class="page" id="page-wallet">
+
+    <div class="wallet-hero">
+      <div class="ton-logo">💎</div>
+      <div class="wallet-title">TON WALLET</div>
+      <div class="wallet-sub">Connect your TON wallet to secure your coins for the airdrop snapshot</div>
+    </div>
+
+    <!-- Airdrop banner -->
+    <div class="airdrop-banner">
+      <div class="airdrop-icon">🚀</div>
+      <div class="airdrop-text">
+        <div class="airdrop-title">AIRDROP SNAPSHOT ACTIVE</div>
+        <div class="airdrop-desc">Connect wallet now to be eligible for the JosCoin token airdrop. Snapshot taken at launch.</div>
+      </div>
+    </div>
+
+    <!-- Wallet address (shown when connected) -->
+    <div class="wallet-address-box" id="walletAddressBox">
+      <div class="wallet-address-label">✅ Connected Wallet</div>
+      <div class="wallet-address-val" id="walletAddressVal">—</div>
+      <button class="wallet-address-copy" onclick="copyWalletAddress()">📋 Copy Address</button>
+    </div>
+
+    <!-- Balance (shown when connected) -->
+    <div class="wallet-balance-card" id="walletBalanceCard">
+      <div class="balance-row">
+        <div class="balance-label">TON Balance</div>
+        <div class="balance-val" id="tonBalance">— TON</div>
+      </div>
+      <div class="coin-to-ton">
+        <div class="coin-to-ton-label">Your JosCoin Balance</div>
+        <div class="coin-to-ton-val">🪙 <span id="walletCoinDisplay">0</span> JOSC</div>
+        <div class="coin-to-ton-note">Will be converted to tokens at airdrop</div>
+      </div>
+    </div>
+
+    <!-- Connect Button -->
+    <button class="ton-connect-btn" id="tonConnectBtn" onclick="connectTonWallet()">
+      <span>💎</span> CONNECT TON WALLET
+    </button>
+
+    <!-- Disconnect Button -->
+    <button class="ton-disconnect-btn" id="tonDisconnectBtn" onclick="disconnectWallet()">
+      🔌 DISCONNECT WALLET
+    </button>
+
+    <!-- Wallet options -->
+    <div class="section-title" id="walletOptionsTitle">CHOOSE WALLET</div>
+    <div id="walletOptions">
+      <div class="wallet-option" onclick="openWallet('tonkeeper')">
+        <div class="wallet-option-icon" style="background:rgba(0,152,234,0.1);">💎</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Tonkeeper</div>
+          <div class="wallet-option-desc">Most popular TON wallet app</div>
+        </div>
+        <div class="wallet-option-arrow">›</div>
+      </div>
+      <div class="wallet-option" onclick="openWallet('tonhub')">
+        <div class="wallet-option-icon" style="background:rgba(123,47,255,0.1);">🔵</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Tonhub</div>
+          <div class="wallet-option-desc">Secure open-source wallet</div>
+        </div>
+        <div class="wallet-option-arrow">›</div>
+      </div>
+      <div class="wallet-option" onclick="openWallet('mytonwallet')">
+        <div class="wallet-option-icon" style="background:rgba(0,200,83,0.1);">🟢</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">MyTonWallet</div>
+          <div class="wallet-option-desc">Simple & fast TON wallet</div>
+        </div>
+        <div class="wallet-option-arrow">›</div>
+      </div>
+      <div class="wallet-option" onclick="openWallet('telegram')">
+        <div class="wallet-option-icon" style="background:rgba(0,136,204,0.1);">✈️</div>
+        <div class="wallet-option-info">
+          <div class="wallet-option-name">Telegram Wallet</div>
+          <div class="wallet-option-desc">Built-in Telegram TON wallet</div>
+        </div>
+        <div class="wallet-option-arrow">›</div>
+      </div>
+    </div>
+
+  </div><!-- end wallet page -->
+
+</div><!-- end app -->
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchPage('tap', this)">
+    <span class="nav-icon">🪙</span>TAP
+  </button>
+  <button class="nav-btn" onclick="switchPage('tasks', this)" style="position:relative;">
+    <span class="nav-icon">📋</span>TASKS
+    <span class="nav-badge" id="taskBadge">3</span>
+  </button>
+  <button class="nav-btn" onclick="switchPage('boost', this)">
+    <span class="nav-icon">⚡</span>BOOST
+  </button>
+  <button class="nav-btn" onclick="switchPage('ref', this)">
+    <span class="nav-icon">👥</span>FRIENDS
+  </button>
+  <button class="nav-btn" onclick="switchPage('wallet', this)" style="position:relative;">
+    <span class="nav-icon">💎</span>WALLET
+    <span class="nav-badge" id="walletBadge" style="background:var(--ton);display:none;">!</span>
+  </button>
+</nav>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  coins: 0, totalTaps: 0, totalEarned: 0, todayEarned: 0,
+  energy: 500, maxEnergy: 500, coinsPerTap: 1,
+  streak: 0, lastClaimed: null, lastDay: new Date().toDateString(),
+  refCount: 0, refCoins: 0,
+  tasks: { telegram: false, twitter: false, share: false, tap100: false, tap1000: false },
+  boosts: { tapPower: 1, maxEnergy: 1, energyRegen: 1 },
+  wallet: { connected: false, address: '', shortAddress: '' }
+};
+
+const BOOST_COSTS = {
+  tapPower:   [0,500,1200,2500,5000,10000],
+  maxEnergy:  [0,300,800,2000,4000,8000],
+  energyRegen:[0,400,1000,2500,5000,10000],
+};
+
+function save() { localStorage.setItem('joscoin_state', JSON.stringify(state)); }
+function load() {
+  const s = localStorage.getItem('joscoin_state');
+  if (s) { try { state = { ...state, ...JSON.parse(s) }; } catch(e) {} }
+  if (state.lastDay !== new Date().toDateString()) { state.todayEarned = 0; state.lastDay = new Date().toDateString(); }
+}
+
+// ─── TELEGRAM ────────────────────────────────────────────────────────────────
+let userId = 'user_' + Math.random().toString(36).slice(2,9);
+function initTelegram() {
+  if (window.Telegram?.WebApp) {
+    Telegram.WebApp.ready(); Telegram.WebApp.expand();
+    const u = Telegram.WebApp.initDataUnsafe?.user;
+    if (u) {
+      userId = 'tg_' + u.id;
+      const name = u.first_name || 'Player';
+      document.getElementById('usernameEl').textContent = name;
+      document.getElementById('avatarEl').textContent = name[0].toUpperCase();
+    }
+    const params = Telegram.WebApp.initDataUnsafe?.start_param;
+    if (params?.startsWith('ref_') && !localStorage.getItem('ref_claimed')) {
+      localStorage.setItem('ref_claimed','1');
+      state.coins += 500; state.totalEarned += 500;
+      showToast('🎁 +500 Referral Bonus!');
+    }
+  }
+  document.getElementById('refLink').textContent = `https://t.me/YourBotUsername?start=ref_${userId}`;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+  if (n >= 1000) return (n/1000).toFixed(1)+'K';
+  return Math.floor(n).toString();
+}
+function render() {
+  document.getElementById('coinCount').textContent = fmt(state.coins);
+  document.getElementById('totalTaps').textContent = fmt(state.totalTaps);
+  document.getElementById('totalEarned').textContent = fmt(state.totalEarned);
+  document.getElementById('todayEarned').textContent = fmt(state.todayEarned);
+  document.getElementById('refCount').textContent = state.refCount;
+  document.getElementById('refNum').textContent = state.refCount;
+  document.getElementById('refCoins').textContent = fmt(state.refCoins);
+  document.getElementById('energyText').textContent = `${state.energy} / ${state.maxEnergy}`;
+  document.getElementById('energyBar').style.width = (state.energy / state.maxEnergy * 100) + '%';
+  document.getElementById('tapRate').textContent = `+${state.coinsPerTap} per tap`;
+  document.getElementById('levelEl').textContent = `⚡ LVL ${Math.floor(state.totalEarned/5000)+1}`;
+  document.getElementById('walletCoinDisplay').textContent = fmt(state.coins);
+  renderWalletUI();
+}
+
+// ─── TAP ─────────────────────────────────────────────────────────────────────
+document.getElementById('tapCoin').addEventListener('click', function(e) {
+  if (state.energy <= 0) { showToast('⚡ Energy depleted! Wait for regen.'); return; }
+  const earned = state.coinsPerTap;
+  state.coins += earned; state.totalTaps++; state.totalEarned += earned; state.todayEarned += earned;
+  state.energy = Math.max(0, state.energy - 1);
+  if (state.totalTaps >= 100 && !state.tasks.tap100) { state.tasks.tap100=true; state.coins+=200; state.totalEarned+=200; showToast('🏆 Task done! +200 coins'); renderTasks(); }
+  if (state.totalTaps >= 1000 && !state.tasks.tap1000) { state.tasks.tap1000=true; state.coins+=1000; state.totalEarned+=1000; showToast('🏆 Task done! +1000 coins'); renderTasks(); }
+  const rect = this.getBoundingClientRect();
+  spawnFloat(e.clientX||rect.left+rect.width/2, e.clientY||rect.top+rect.height/2, `+${earned}`);
+  const ripple = document.createElement('span'); ripple.className='ripple';
+  const sz=80, x=(e.clientX||rect.left+100)-rect.left-sz/2, y=(e.clientY||rect.top+100)-rect.top-sz/2;
+  ripple.style.cssText=`width:${sz}px;height:${sz}px;left:${x}px;top:${y}px;`;
+  this.appendChild(ripple); setTimeout(()=>ripple.remove(),600);
+  const cc=document.getElementById('coinCount'); cc.style.transform='scale(1.2)'; setTimeout(()=>cc.style.transform='',100);
+  render(); save();
+});
+
+function spawnFloat(x,y,text) {
+  const el=document.createElement('div'); el.className='float-num';
+  el.textContent=text; el.style.left=(x-20)+'px'; el.style.top=(y-20)+'px';
+  document.body.appendChild(el); setTimeout(()=>el.remove(),900);
+}
+
+setInterval(()=>{
+  if (state.energy < state.maxEnergy) { state.energy=Math.min(state.maxEnergy, state.energy+state.boosts.energyRegen); render(); save(); }
+},1000);
+
+// ─── DAILY ───────────────────────────────────────────────────────────────────
+const DAY_REWARDS=[100,200,300,500,750,1000,2000];
+function renderDaily() {
+  const dots=document.getElementById('dailyDots'); dots.innerHTML='';
+  const today=new Date().toDateString(), claimed=state.lastClaimed===today;
+  for(let i=0;i<7;i++){
+    const d=document.createElement('div'); d.className='day-dot';
+    const isCurrent=i===(state.streak%7), isPast=i<(state.streak%7);
+    if(isPast||(isCurrent&&claimed)) d.classList.add('claimed');
+    else if(isCurrent&&!claimed) d.classList.add('today');
+    d.innerHTML=`<div class="day-num">${i+1}</div><div style="font-size:8px">🪙${DAY_REWARDS[i]}</div>`;
+    dots.appendChild(d);
+  }
+  document.getElementById('streakLabel').textContent=`🔥 ${state.streak} day streak`;
+  const btn=document.getElementById('claimBtn');
+  btn.textContent=claimed?'✅ CLAIMED TODAY':'CLAIM TODAY\'S REWARD';
+  btn.disabled=claimed;
+}
+function claimDaily() {
+  const today=new Date().toDateString();
+  if(state.lastClaimed===today) return;
+  const reward=DAY_REWARDS[state.streak%7];
+  state.coins+=reward; state.totalEarned+=reward; state.todayEarned+=reward;
+  state.streak++; state.lastClaimed=today;
+  showToast(`🎁 Day ${state.streak} reward: +${reward} coins!`);
+  renderDaily(); render(); save(); updateTaskBadge();
+}
+
+// ─── TASKS ───────────────────────────────────────────────────────────────────
+const TASKS=[
+  {id:'telegram',icon:'📢',name:'Join Telegram Channel',desc:'Join @JosCoin official channel',reward:500,action:()=>window.open('https://t.me/yourchannel')},
+  {id:'twitter', icon:'🐦',name:'Follow on Twitter',   desc:'Follow @JosCoin on X/Twitter', reward:300,action:()=>window.open('https://twitter.com/yourhandle')},
+  {id:'share',   icon:'📤',name:'Share the App',        desc:'Share JosCoin with anyone',    reward:250,action:shareApp},
+  {id:'tap100',  icon:'👆',name:'Tap 100 Times',        desc:'Progress: 0/100',              reward:200,action:null},
+  {id:'tap1000', icon:'🚀',name:'Tap 1000 Times',       desc:'Progress: 0/1000',             reward:1000,action:null},
+];
+function renderTasks() {
+  const list=document.getElementById('taskList'); list.innerHTML='';
+  TASKS.forEach(t=>{
+    const done=state.tasks[t.id];
+    const div=document.createElement('div'); div.className='task-item'+(done?' done':'');
+    let desc=t.desc;
+    if(t.id==='tap100') desc=`Progress: ${Math.min(state.totalTaps,100)}/100`;
+    if(t.id==='tap1000') desc=`Progress: ${Math.min(state.totalTaps,1000)}/1000`;
+    div.innerHTML=`<div class="task-icon">${t.icon}</div><div class="task-info"><div class="task-name">${t.name}</div><div class="task-desc">${desc}</div></div><div class="task-reward">🪙${t.reward} <span>${done?'✅':'▶'}</span></div>`;
+    if(!done&&t.action) div.onclick=()=>{ t.action(); setTimeout(()=>{ state.tasks[t.id]=true; state.coins+=t.reward; state.totalEarned+=t.reward; showToast(`✅ +${t.reward} coins`); renderTasks(); render(); save(); updateTaskBadge(); },1500); };
+    list.appendChild(div);
+  });
+}
+function updateTaskBadge() {
+  const pending=TASKS.filter(t=>!state.tasks[t.id]).length;
+  const b=document.getElementById('taskBadge');
+  b.textContent=pending; b.style.display=pending>0?'block':'none';
+}
+
+// ─── BOOSTS ──────────────────────────────────────────────────────────────────
+const BOOSTS_DEF=[
+  {id:'tapPower',  icon:'⚡',name:'Tap Power',   desc:'Earn more coins per tap', unit:'coin/tap',val:l=>l},
+  {id:'maxEnergy', icon:'🔋',name:'Max Energy',  desc:'Increase energy capacity',unit:'energy',  val:l=>l*100+400},
+  {id:'energyRegen',icon:'♻️',name:'Energy Regen',desc:'Faster energy recovery', unit:'/sec',    val:l=>l},
+];
+function renderBoosts() {
+  const list=document.getElementById('boostList'); list.innerHTML='';
+  BOOSTS_DEF.forEach(b=>{
+    const lvl=state.boosts[b.id], maxLvl=BOOST_COSTS[b.id].length-1;
+    const cost=lvl<maxLvl?BOOST_COSTS[b.id][lvl]:null;
+    const div=document.createElement('div'); div.className='boost-item';
+    div.innerHTML=`<div class="boost-icon">${b.icon}</div><div class="boost-info"><div class="boost-name">${b.name}</div><div class="boost-desc">${b.desc}</div><div class="boost-level">Level ${lvl} → ${b.val(lvl)} ${b.unit}</div></div>${cost!==null?`<button class="boost-buy" onclick="buyBoost('${b.id}')" ${state.coins<cost?'disabled':''}>🪙${cost}</button>`:'<button class="boost-buy" disabled>MAX</button>'}`;
+    list.appendChild(div);
+  });
+}
+function buyBoost(id) {
+  const lvl=state.boosts[id], maxLvl=BOOST_COSTS[id].length-1;
+  if(lvl>=maxLvl) return;
+  const cost=BOOST_COSTS[id][lvl];
+  if(state.coins<cost){showToast('❌ Not enough coins!');return;}
+  state.coins-=cost; state.boosts[id]++;
+  state.coinsPerTap=state.boosts.tapPower;
+  state.maxEnergy=500+(state.boosts.maxEnergy-1)*100;
+  if(state.energy>state.maxEnergy) state.energy=state.maxEnergy;
+  showToast(`⬆️ Upgraded to Lv ${state.boosts[id]}!`);
+  renderBoosts(); render(); save();
+}
+
+// ─── REFERRAL ────────────────────────────────────────────────────────────────
+function copyRef() {
+  const link=document.getElementById('refLink').textContent;
+  navigator.clipboard.writeText(link).catch(()=>{const ta=document.createElement('textarea');ta.value=link;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();});
+  showToast('📋 Link copied!');
+}
+function inviteTelegram() {
+  const link=document.getElementById('refLink').textContent;
+  const msg=encodeURIComponent(`🪙 Join JosCoin and earn free crypto!\nTap to earn & get airdrop rewards!\n\n${link}`);
+  if(window.Telegram?.WebApp) Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${msg}`);
+  else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${msg}`);
+}
+function shareApp() { const link=document.getElementById('refLink').textContent; if(navigator.share) navigator.share({title:'JosCoin',text:'Earn free crypto!',url:link}); else copyRef(); }
+
+// ─── WALLET ──────────────────────────────────────────────────────────────────
+const WALLET_URLS = {
+  tonkeeper:   'https://app.tonkeeper.com/ton-connect',
+  tonhub:      'https://tonhub.com/ton-connect',
+  mytonwallet: 'https://mytonwallet.io/',
+  telegram:    'https://t.me/wallet',
+};
+
+function openWallet(type) {
+  const url = WALLET_URLS[type];
+  if (window.Telegram?.WebApp) {
+    Telegram.WebApp.openLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
+  // Simulate connection after redirect (in production use TON Connect SDK)
+  setTimeout(() => simulateConnect(), 1000);
+}
+
+function connectTonWallet() {
+  // Try TON Connect UI if available
+  if (window.TON_CONNECT_UI) {
+    window.TON_CONNECT_UI.connectWallet();
+  } else {
+    // Fallback: show wallet list (already visible) + open Tonkeeper
+    showToast('💎 Choose a wallet below!', 'ton');
+    document.getElementById('walletOptions').scrollIntoView({behavior:'smooth'});
+  }
+}
+
+function simulateConnect() {
+  // In production this comes from TON Connect SDK callback
+  const fakeAddr = 'UQ' + Array.from({length:46},()=>'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*62)]).join('');
+  setWalletConnected(fakeAddr);
+}
+
+function setWalletConnected(address) {
+  state.wallet.connected = true;
+  state.wallet.address = address;
+  state.wallet.shortAddress = address.slice(0,6) + '...' + address.slice(-4);
+  showToast('✅ Wallet Connected!', 'ton');
+  renderWalletUI(); render(); save();
+  // Hide badge
+  document.getElementById('walletBadge').style.display = 'none';
+}
+
+function disconnectWallet() {
+  state.wallet.connected = false;
+  state.wallet.address = '';
+  state.wallet.shortAddress = '';
+  showToast('🔌 Wallet Disconnected');
+  renderWalletUI(); save();
+}
+
+function copyWalletAddress() {
+  navigator.clipboard.writeText(state.wallet.address).catch(()=>{});
+  showToast('📋 Address copied!', 'ton');
+}
+
+function renderWalletUI() {
+  const connected = state.wallet.connected;
+  const connectBtn = document.getElementById('tonConnectBtn');
+  const disconnectBtn = document.getElementById('tonDisconnectBtn');
+  const addrBox = document.getElementById('walletAddressBox');
+  const balCard = document.getElementById('walletBalanceCard');
+  const walletOpts = document.getElementById('walletOptions');
+  const walletOptsTitle = document.getElementById('walletOptionsTitle');
+
+  if (connected) {
+    connectBtn.innerHTML = `<span>✅</span> WALLET CONNECTED`;
+    connectBtn.classList.add('connected');
+    connectBtn.onclick = null;
+    disconnectBtn.style.display = 'block';
+    addrBox.style.display = 'block';
+    balCard.style.display = 'block';
+    walletOpts.style.display = 'none';
+    walletOptsTitle.style.display = 'none';
+    document.getElementById('walletAddressVal').textContent = state.wallet.address;
+    document.getElementById('tonBalance').textContent = '— TON'; // fetch from chain in production
+    document.getElementById('walletCoinDisplay').textContent = fmt(state.coins);
+  } else {
+    connectBtn.innerHTML = `<span>💎</span> CONNECT TON WALLET`;
+    connectBtn.classList.remove('connected');
+    connectBtn.onclick = connectTonWallet;
+    disconnectBtn.style.display = 'none';
+    addrBox.style.display = 'none';
+    balCard.style.display = 'none';
+    walletOpts.style.display = 'block';
+    walletOptsTitle.style.display = 'block';
+  }
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function switchPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='tasks'){renderDaily();renderTasks();}
+  if(name==='boost') renderBoosts();
+  if(name==='wallet') renderWalletUI();
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast'+(type?' '+type:'');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+load();
+initTelegram();
+state.coinsPerTap = state.boosts.tapPower;
+state.maxEnergy = 500+(state.boosts.maxEnergy-1)*100;
+render();
+renderDaily();
+renderTasks();
+updateTaskBadge();
+// Show wallet badge if not connected
+if (!state.wallet.connected) {
+  document.getElementById('walletBadge').style.display = 'block';
+}
+</script>
+</body>
+</html>
